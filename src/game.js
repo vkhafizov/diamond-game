@@ -1,7 +1,7 @@
 /**
  * Core game engine: canvas rendering, input handling, game state.
  */
-import { clamp, hexToRgba, shiftColor, cellToIdx, countCells, computeScore } from './utils.js';
+import { clamp, hexToRgba, shiftColor, rotateHue, cellToIdx, countCells, computeScore } from './utils.js';
 import { playPlace, playGroupComplete } from './audio.js';
 
 const CELL_BASE = 24;     // base cell size in px before zoom
@@ -61,8 +61,10 @@ export class Game {
     this._completedGroups = new Set();
     this._groupFlashes    = new Map();   // colorId → { until }
 
-    // Background particles
+    // Background particles (Tier 1: ambient crystal dust)
     this._particles = [];
+    // Burst particles (Tier 2: placement burst, Tier 3: group cascade)
+    this._burstParticles = [];
 
     this._bindEvents();
     this._fitToCanvas();
@@ -148,9 +150,10 @@ export class Game {
       return;
     }
     this.filled.add(idx);
-    this._flashes.set(idx, { until: Date.now() + 500, correct: true });
+    this._flashes.set(idx, { until: Date.now() + 700, correct: true });
     // Entrance bounce animation
-    this._cellEnter.set(idx, { start: Date.now(), duration: 380 });
+    this._cellEnter.set(idx, { start: Date.now(), duration: 450 });
+    this._spawnBurst(idx);
     playPlace();
     this._afterFill();
   }
@@ -172,6 +175,7 @@ export class Game {
         if (filledN >= total) {
           this._completedGroups.add(id);
           this._groupFlashes.set(id, { until: Date.now() + 1000 });
+          this._spawnGroupCascade(id);
           playGroupComplete();
         }
       }
@@ -187,10 +191,13 @@ export class Game {
 
   // ─── Particles ─────────────────────────────────────────────────────────────
 
+  // Tier 1: Ambient crystal dust
+  static _DUST_COLORS = ['#c4b5fd', '#67e8f9', '#f0abfc', '#fde68a', '#a5f3fc'];
+
   _initParticles() {
     const w = this.canvas.width  || 400;
     const h = this.canvas.height || 600;
-    for (let i = 0; i < 28; i++) {
+    for (let i = 0; i < 40; i++) {
       this._particles.push(this._makeParticle(w, h, true));
     }
   }
@@ -199,13 +206,15 @@ export class Game {
     return {
       x:       Math.random() * w,
       y:       initial ? Math.random() * h : h + 4,
-      vx:      (Math.random() - 0.5) * 0.35,
-      vy:      -(0.25 + Math.random() * 0.45),
-      size:    0.8 + Math.random() * 1.8,
-      opacity: 0.08 + Math.random() * 0.18,
-      color:   Math.random() < 0.55 ? '#7c3aed' : '#06b6d4',
-      life:    initial ? Math.floor(Math.random() * 250) : 0,
-      maxLife: 200 + Math.floor(Math.random() * 280),
+      vx:      (Math.random() - 0.5) * 0.30,
+      vy:      -(0.20 + Math.random() * 0.38),
+      size:    0.7 + Math.random() * 1.4,
+      opacity: 0.07 + Math.random() * 0.16,
+      color:   Game._DUST_COLORS[Math.floor(Math.random() * Game._DUST_COLORS.length)],
+      life:    initial ? Math.floor(Math.random() * 260) : 0,
+      maxLife: 220 + Math.floor(Math.random() * 280),
+      rot:     Math.random() * Math.PI * 2,
+      rotV:    (Math.random() - 0.5) * 0.025,
     };
   }
 
@@ -215,23 +224,166 @@ export class Game {
     const h = canvas.height;
     for (let i = 0; i < this._particles.length; i++) {
       const p = this._particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
+      p.x   += p.vx;
+      p.y   += p.vy;
+      p.rot += p.rotV;
       p.life++;
       const fade = p.life < 40
         ? p.life / 40
         : p.life > p.maxLife - 40
           ? (p.maxLife - p.life) / 40
           : 1;
-      ctx.globalAlpha = p.opacity * fade;
-      ctx.fillStyle   = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
+      const alpha = p.opacity * fade;
+      if (alpha > 0.003) {
+        this._drawTinyDiamond(ctx, p.x, p.y, p.size, p.color, alpha, p.rot);
+      }
       if (p.life >= p.maxLife || p.y < -8) {
         const np = this._makeParticle(w, h, false);
         np.x = Math.random() * w;
         this._particles[i] = np;
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  _drawTinyDiamond(ctx, x, y, r, color, alpha, rot) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle   = color;
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    ctx.moveTo(0,  -r);
+    ctx.lineTo(r,   0);
+    ctx.lineTo(0,   r);
+    ctx.lineTo(-r,  0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Tier 2: Placement burst
+  _spawnBurst(cellIdx) {
+    const cs    = this._cellSize();
+    const col   = cellIdx % this.level.width;
+    const row   = Math.floor(cellIdx / this.level.width);
+    const cx    = this.offsetX + col * cs + cs / 2;
+    const cy    = this.offsetY + row * cs + cs / 2;
+    const color = this.paletteMap.get(this.level.cells[cellIdx]) ?? '#ffffff';
+
+    // 12 mini-diamond burst
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const speed = 1.4 + Math.random() * 2.2;
+      this._burstParticles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        vDamp: 0.94,
+        size: 1.5 + Math.random() * 2.0,
+        color,
+        life: 0,
+        maxLife: 28 + Math.floor(Math.random() * 18),
+        rot: Math.random() * Math.PI * 2,
+        rotV: (Math.random() - 0.5) * 0.3,
+        type: 'diamond',
+      });
+    }
+
+    // 3 light ray streaks
+    for (let i = 0; i < 3; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2.5 + Math.random() * 2;
+      this._burstParticles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        vDamp: 0.90,
+        size: 5 + Math.random() * 4,
+        color: '#ffffff',
+        life: 0,
+        maxLife: 16,
+        rot: angle,
+        rotV: 0,
+        type: 'ray',
+      });
+    }
+  }
+
+  // Tier 3: Group completion cascade
+  _spawnGroupCascade(colorId) {
+    const cs    = this._cellSize();
+    const cells = this.level.cells;
+    const w     = this.level.width;
+    const color = this.paletteMap.get(colorId) ?? '#ffffff';
+    const gold  = '#fde68a';
+    const indices = [];
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i] === colorId) indices.push(i);
+    }
+    for (let n = 0; n < 40; n++) {
+      const idx = indices[Math.floor(Math.random() * indices.length)];
+      const col = idx % w;
+      const row = Math.floor(idx / w);
+      const cx  = this.offsetX + col * cs + cs / 2;
+      const cy  = this.offsetY + row * cs + cs / 2;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2.5 + Math.random() * 3.5;
+      this._burstParticles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.5,
+        vDamp: 0.92,
+        size: 2.5 + Math.random() * 2.5,
+        color: Math.random() < 0.5 ? color : gold,
+        life: 0,
+        maxLife: 50 + Math.floor(Math.random() * 22),
+        rot: Math.random() * Math.PI * 2,
+        rotV: (Math.random() - 0.5) * 0.18,
+        type: 'diamond',
+      });
+    }
+  }
+
+  _updateBurstParticles() {
+    const { ctx } = this;
+    for (let i = this._burstParticles.length - 1; i >= 0; i--) {
+      const p = this._burstParticles[i];
+      p.x  += p.vx;
+      p.y  += p.vy;
+      p.vx *= p.vDamp;
+      p.vy *= p.vDamp;
+      p.vy += 0.06; // gentle gravity
+      p.rot += p.rotV;
+      p.life++;
+
+      const fade = p.life < 4
+        ? p.life / 4
+        : 1 - (p.life / p.maxLife);
+      const alpha = Math.max(0, fade);
+
+      if (alpha > 0.01) {
+        if (p.type === 'ray') {
+          // Elongated light streak
+          ctx.save();
+          ctx.globalAlpha = alpha * 0.7;
+          ctx.strokeStyle = p.color;
+          ctx.lineWidth   = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(
+            p.x - Math.cos(p.rot) * p.size * 3,
+            p.y - Math.sin(p.rot) * p.size * 3
+          );
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          this._drawTinyDiamond(ctx, p.x, p.y, p.size, p.color, alpha, p.rot);
+        }
+      }
+
+      if (p.life >= p.maxLife) {
+        this._burstParticles.splice(i, 1);
       }
     }
     ctx.globalAlpha = 1;
@@ -257,7 +409,7 @@ export class Game {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Subtle floating particles behind the grid
+    // Tier 1: ambient crystal dust
     this._updateParticles();
 
     const ox = this.offsetX;
@@ -348,10 +500,14 @@ export class Game {
     for (const [idx, f] of this._flashes) {
       if (f.until <= now) this._flashes.delete(idx);
     }
+
+    // Tier 2 & 3: burst + cascade particles (drawn on top of grid)
+    this._updateBurstParticles();
   }
 
   /**
-   * Draw a shiny diamond shape in a cell.
+   * Draw a multi-facet jewel-like diamond in a cell.
+   * 6-step pipeline: glow → radial body → facets → rim light → highlight → glitter
    * @param {number} scale  Optional entrance scale (1 = normal)
    */
   _drawDiamond(ctx, x, y, cs, color, glitter = false, scale = 1) {
@@ -362,58 +518,163 @@ export class Game {
 
     ctx.save();
 
-    // Apply entrance scale from center of cell
     if (scale !== 1) {
       ctx.translate(cx, cy);
       ctx.scale(scale, scale);
       ctx.translate(-cx, -cy);
     }
 
-    // Shadow
-    ctx.shadowColor = hexToRgba(color, 0.6);
-    ctx.shadowBlur  = cs * 0.3;
+    // ── Helper: clip to diamond shape ──────────────────────────────────────────
+    function diamondPath() {
+      ctx.beginPath();
+      ctx.moveTo(cx,      cy - hh);
+      ctx.lineTo(cx + hw, cy);
+      ctx.lineTo(cx,      cy + hh);
+      ctx.lineTo(cx - hw, cy);
+      ctx.closePath();
+    }
 
-    // Diamond path
-    ctx.beginPath();
-    ctx.moveTo(cx,      cy - hh);  // top
-    ctx.lineTo(cx + hw, cy);       // right
-    ctx.lineTo(cx,      cy + hh);  // bottom
-    ctx.lineTo(cx - hw, cy);       // left
-    ctx.closePath();
+    // Step 1 — Outer glow (shadow pass)
+    ctx.shadowColor = hexToRgba(color, 0.7);
+    ctx.shadowBlur  = cs * 0.5;
+    diamondPath();
+    ctx.fillStyle = hexToRgba(color, 0.01); // near-invisible fill, just to emit shadow
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
 
-    // Fill gradient
-    const grad = ctx.createLinearGradient(cx - hw, cy - hh, cx + hw, cy + hh);
-    grad.addColorStop(0,    shiftColor(color,  0.5));
-    grad.addColorStop(0.45, color);
-    grad.addColorStop(1,    shiftColor(color, -0.35));
+    // Step 2 — Radial body gradient (off-center highlight)
+    diamondPath();
+    const grad = ctx.createRadialGradient(
+      cx - hw * 0.22, cy - hh * 0.30, 0,
+      cx, cy, hw * 1.15
+    );
+    grad.addColorStop(0,    shiftColor(color,  0.62));
+    grad.addColorStop(0.28, shiftColor(color,  0.20));
+    grad.addColorStop(0.58, color);
+    grad.addColorStop(0.82, shiftColor(color, -0.22));
+    grad.addColorStop(1,    shiftColor(color, -0.45));
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // Highlight
+    // Step 3 — 4 facet planes (clip to diamond)
+    ctx.save();
+    diamondPath();
+    ctx.clip();
+
+    // Upper-left facet (pale brightened)
+    const ulGrad = ctx.createLinearGradient(cx - hw, cy - hh, cx, cy);
+    ulGrad.addColorStop(0, hexToRgba(shiftColor(color, 0.45), 0.55));
+    ulGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = ulGrad;
     ctx.beginPath();
-    ctx.moveTo(cx - hw * 0.1, cy - hh * 0.8);
-    ctx.lineTo(cx + hw * 0.35, cy - hh * 0.25);
-    ctx.lineTo(cx - hw * 0.05, cy - hh * 0.05);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.moveTo(cx, cy - hh); ctx.lineTo(cx - hw, cy); ctx.lineTo(cx, cy); ctx.closePath();
     ctx.fill();
 
+    // Upper-right facet (white shimmer)
+    const urGrad = ctx.createLinearGradient(cx + hw, cy - hh, cx, cy);
+    urGrad.addColorStop(0, 'rgba(255,255,255,0.38)');
+    urGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = urGrad;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - hh); ctx.lineTo(cx + hw, cy); ctx.lineTo(cx, cy); ctx.closePath();
+    ctx.fill();
+
+    // Lower-left facet (darkened)
+    ctx.fillStyle = hexToRgba(shiftColor(color, -0.30), 0.62);
+    ctx.beginPath();
+    ctx.moveTo(cx - hw, cy); ctx.lineTo(cx, cy + hh); ctx.lineTo(cx, cy); ctx.closePath();
+    ctx.fill();
+
+    // Lower-right facet (darkest)
+    ctx.fillStyle = hexToRgba(shiftColor(color, -0.42), 0.68);
+    ctx.beginPath();
+    ctx.moveTo(cx + hw, cy); ctx.lineTo(cx, cy + hh); ctx.lineTo(cx, cy); ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+
+    // Step 4 — Prismatic rim light (stroke with hue-rotated gradient)
+    diamondPath();
+    const rimGrad = ctx.createLinearGradient(cx - hw, cy, cx + hw, cy);
+    rimGrad.addColorStop(0,    rotateHue(color,  60));
+    rimGrad.addColorStop(0.33, rotateHue(color, 120));
+    rimGrad.addColorStop(0.66, rotateHue(color, -60));
+    rimGrad.addColorStop(1,    rotateHue(color, -120));
+    ctx.strokeStyle = rimGrad;
+    ctx.lineWidth   = Math.max(0.5, cs * 0.032);
+    ctx.globalAlpha = 0.50;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Step 5 — Top highlight capsule (schlieren effect)
+    ctx.save();
+    diamondPath();
+    ctx.clip();
+    if (ctx.filter !== undefined) ctx.filter = 'blur(1px)';
+    ctx.globalAlpha = 0.42;
+    ctx.fillStyle   = '#ffffff';
+    ctx.beginPath();
+    const hx = cx - hw * 0.12;
+    const hy = cy - hh * 0.52;
+    const hr = cs * 0.11;
+    ctx.ellipse(hx, hy, hr, hr * 0.45, -Math.PI / 5, 0, Math.PI * 2);
+    ctx.fill();
+    if (ctx.filter !== undefined) ctx.filter = 'none';
+    ctx.restore();
+
+    // Step 6 — Glitter burst (just-placed sparkle)
     if (glitter) {
-      // Multi-point sparkle radiating outward
-      ctx.shadowBlur  = cs * 0.6;
+      ctx.shadowBlur  = cs * 0.65;
       ctx.shadowColor = '#ffffff';
-      const sparkCount = 6;
-      for (let i = 0; i < sparkCount; i++) {
-        const angle = (i / sparkCount) * Math.PI * 2 - Math.PI / 4;
-        const dist  = cs * 0.4;
-        const r     = Math.max(1, cs * (0.07 - i * 0.005));
-        ctx.fillStyle = `rgba(255,255,255,${0.9 - i * 0.08})`;
+
+      // 8 radiating star lines
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const len   = cs * 0.52;
+        const lineGrad = ctx.createLinearGradient(
+          cx, cy,
+          cx + Math.cos(angle) * len,
+          cy + Math.sin(angle) * len
+        );
+        lineGrad.addColorStop(0,   'rgba(255,255,255,0.85)');
+        lineGrad.addColorStop(0.6, 'rgba(255,255,255,0.25)');
+        lineGrad.addColorStop(1,   'rgba(255,255,255,0)');
+        ctx.strokeStyle = lineGrad;
+        ctx.lineWidth   = Math.max(0.8, cs * 0.045);
+        ctx.globalAlpha = 0.9;
         ctx.beginPath();
-        ctx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, r, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(angle) * len, cy + Math.sin(angle) * len);
+        ctx.stroke();
       }
-      // Central bright dot
-      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.globalAlpha = 1;
+
+      // 4 secondary diamond sparkles at 45° offset
+      for (let i = 0; i < 4; i++) {
+        const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+        const dist  = cs * 0.38;
+        const sr    = cs * 0.07;
+        const sx    = cx + Math.cos(angle) * dist;
+        const sy    = cy + Math.sin(angle) * dist;
+        ctx.fillStyle   = 'rgba(255,255,255,0.88)';
+        ctx.globalAlpha = 0.88;
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(0, -sr); ctx.lineTo(sr * 0.5, 0);
+        ctx.lineTo(0,  sr); ctx.lineTo(-sr * 0.5, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+
+      // Central bloom
+      ctx.shadowBlur  = cs * 0.8;
+      ctx.shadowColor = '#ffffff';
+      ctx.fillStyle   = 'rgba(255,255,255,0.95)';
       ctx.beginPath();
       ctx.arc(cx, cy, cs * 0.1, 0, Math.PI * 2);
       ctx.fill();

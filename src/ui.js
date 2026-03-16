@@ -129,6 +129,12 @@ export function showCompleteScreen(level, score, stars) {
   renderPreview(canvas, level);
   wrap.appendChild(canvas);
 
-  rating.textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+  // Staggered star pop animation — each star is a separate <span>
+  rating.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const span = document.createElement('span');
+    span.textContent = i < stars ? '★' : '☆';
+    rating.appendChild(span);
+  }
   scoreEl.textContent = `Score: ${score.toLocaleString()}`;
 }
