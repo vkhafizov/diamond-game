@@ -13,6 +13,8 @@ import {
   submitScore, showLeaderboard,
   showInterstitial, showRewardedAd,
 } from './yandex.js';
+import { initAurora, pauseAurora, resumeAurora } from './aurora.js';
+import { startAmbientDrone, playLevelComplete } from './audio.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -43,10 +45,46 @@ const levelGrid      = document.getElementById('level-grid');
 
 // ─── Screen helpers ───────────────────────────────────────────────────────────
 
+// Screen transition directions: from → to → class
+const TRANSITION_DIR = {
+  'start→select':   'entering-from-right',
+  'select→game':    'entering-from-right',
+  'game→select':    'entering-from-left',
+  'complete→select':'entering-from-left',
+  'start→game':     'entering-from-right',
+  'select→complete':'entering-scale',
+  'game→complete':  'entering-scale',
+  'complete→game':  'entering-from-right',
+};
+
+let _currentScreen = 'start';
+
 function showScreen(name) {
+  const dirKey = `${_currentScreen}→${name}`;
+  const dir    = TRANSITION_DIR[dirKey] || 'entering-from-right';
+  _currentScreen = name;
+
   Object.entries(screens).forEach(([key, el]) => {
-    el.classList.toggle('active', key === name);
+    if (key === name) {
+      el.classList.remove('entering-from-right', 'entering-from-left', 'entering-scale');
+      el.classList.add('active', dir);
+      // Remove direction class after animation ends
+      const onEnd = () => {
+        el.classList.remove(dir);
+        el.removeEventListener('animationend', onEnd);
+      };
+      el.addEventListener('animationend', onEnd, { once: true });
+    } else {
+      el.classList.remove('active');
+    }
   });
+
+  // Aurora management
+  if (name === 'game') {
+    pauseAurora();
+  } else {
+    resumeAurora();
+  }
 }
 
 // ─── Game lifecycle ───────────────────────────────────────────────────────────
@@ -105,6 +143,7 @@ function startLevel(levelId) {
       await saveData(appState);
       await submitScore(appState.scores[levelId]);
 
+      playLevelComplete();
       showCompleteScreen(level, score, stars);
       showScreen('complete');
 
@@ -159,6 +198,7 @@ window.addEventListener('resize', resizeCanvas);
 
 // Start screen
 document.getElementById('btn-play').addEventListener('click', () => {
+  startAmbientDrone();
   buildLevelGrid(levelGrid, appState, (id) => {
     showInterstitial().then(() => startLevel(id));
   });
@@ -206,9 +246,12 @@ document.getElementById('btn-back-select2').addEventListener('click', () => {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 async function init() {
+  initAurora(document.getElementById('aurora-bg'));
   await initYandex();
   appState = await loadData();
-  showScreen('start');
+  // Show start without transition animation
+  screens.start.classList.add('active');
+  _currentScreen = 'start';
 }
 
 init();

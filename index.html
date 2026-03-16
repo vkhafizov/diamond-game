@@ -6,11 +6,12 @@
   <title>Diamond Painting</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Cinzel:wght@700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <script src="//yandex.ru/games/sdk/v2"></script>
 </head>
 <body>
+  <canvas id="aurora-bg" aria-hidden="true"></canvas>
   <div id="app">
 
     <!-- Start Screen -->
@@ -83,7 +84,7 @@
           <polygon points="50,8 32,34 50,34" fill="rgba(255,255,255,0.14)"/>
         </svg>
 
-        <h1 class="game-title">Diamond Painting</h1>
+        <h1 class="game-title">Diamond<br>Painting</h1>
         <p class="game-subtitle">Fill the grid · Reveal the art</p>
         <button id="btn-play" class="btn btn-primary">Play</button>
         <button id="btn-leaderboard" class="btn btn-secondary">🏆 Leaderboard</button>
