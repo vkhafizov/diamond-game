@@ -59,6 +59,10 @@ function startLevel(levelId) {
   // Destroy any running game
   if (currentGame) { currentGame.destroy(); currentGame = null; }
 
+  // Update level name in header
+  const levelNameEl = document.getElementById('level-name-display');
+  if (levelNameEl) levelNameEl.textContent = level.name;
+
   // Resize canvas to fill its container
   resizeCanvas();
 

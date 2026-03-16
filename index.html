@@ -4,16 +4,87 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Diamond Painting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <script src="//yandex.ru/games/sdk/v2"></script>
 </head>
 <body>
   <div id="app">
+
     <!-- Start Screen -->
     <div id="screen-start" class="screen active">
+      <!-- Decorative floating gems -->
+      <div class="start-gems" aria-hidden="true">
+        <svg class="gem" style="--d:5.5s;--delay:0s;width:46px;top:9%;left:7%;opacity:0.2" viewBox="0 0 50 55">
+          <polygon points="25,3 47,20 25,52 3,20" fill="#a78bfa"/>
+          <polygon points="25,3 47,20 25,20" fill="rgba(255,255,255,0.32)"/>
+          <line x1="3" y1="20" x2="47" y2="20" stroke="rgba(255,255,255,0.4)" stroke-width="0.8"/>
+        </svg>
+        <svg class="gem" style="--d:7s;--delay:-2.5s;width:30px;top:14%;right:9%;opacity:0.15" viewBox="0 0 50 55">
+          <polygon points="25,3 47,20 25,52 3,20" fill="#67e8f9"/>
+          <polygon points="25,3 47,20 25,20" fill="rgba(255,255,255,0.35)"/>
+          <line x1="3" y1="20" x2="47" y2="20" stroke="rgba(255,255,255,0.4)" stroke-width="0.8"/>
+        </svg>
+        <svg class="gem" style="--d:6.5s;--delay:-1.2s;width:58px;bottom:22%;left:4%;opacity:0.13" viewBox="0 0 50 55">
+          <polygon points="25,3 47,20 25,52 3,20" fill="#7c3aed"/>
+          <polygon points="25,3 47,20 25,20" fill="rgba(255,255,255,0.2)"/>
+          <line x1="3" y1="20" x2="47" y2="20" stroke="rgba(255,255,255,0.35)" stroke-width="0.8"/>
+        </svg>
+        <svg class="gem" style="--d:8.5s;--delay:-3.5s;width:22px;bottom:32%;right:7%;opacity:0.18" viewBox="0 0 50 55">
+          <polygon points="25,3 47,20 25,52 3,20" fill="#f59e0b"/>
+          <polygon points="25,3 47,20 25,20" fill="rgba(255,255,255,0.45)"/>
+          <line x1="3" y1="20" x2="47" y2="20" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+        </svg>
+        <svg class="gem" style="--d:9s;--delay:-5s;width:36px;top:48%;right:3%;opacity:0.1" viewBox="0 0 50 55">
+          <polygon points="25,3 47,20 25,52 3,20" fill="#a78bfa"/>
+          <polygon points="25,3 47,20 25,20" fill="rgba(255,255,255,0.25)"/>
+        </svg>
+        <svg class="gem" style="--d:6s;--delay:-4s;width:18px;top:70%;left:12%;opacity:0.14" viewBox="0 0 50 55">
+          <polygon points="25,3 47,20 25,52 3,20" fill="#06b6d4"/>
+          <polygon points="25,3 47,20 25,20" fill="rgba(255,255,255,0.4)"/>
+        </svg>
+      </div>
+
       <div class="start-content">
-        <h1 class="game-title">💎 Diamond Painting</h1>
-        <p class="game-subtitle">Fill the grid and reveal the art</p>
+        <!-- Animated diamond logo -->
+        <svg class="game-logo" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="gem-tl" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#c4b5fd"/>
+              <stop offset="100%" stop-color="#7c3aed"/>
+            </linearGradient>
+            <linearGradient id="gem-tr" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#67e8f9"/>
+              <stop offset="100%" stop-color="#0891b2"/>
+            </linearGradient>
+            <linearGradient id="gem-bl" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#4c1d95"/>
+              <stop offset="100%" stop-color="#6d28d9"/>
+            </linearGradient>
+            <linearGradient id="gem-br" x1="100%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#164e63"/>
+              <stop offset="100%" stop-color="#0e7490"/>
+            </linearGradient>
+          </defs>
+          <!-- Top-left crown -->
+          <polygon points="50,6 14,40 50,40" fill="url(#gem-tl)"/>
+          <!-- Top-right crown -->
+          <polygon points="50,6 86,40 50,40" fill="url(#gem-tr)" opacity="0.9"/>
+          <!-- Bottom-left pavilion -->
+          <polygon points="14,40 50,40 50,104" fill="url(#gem-bl)" opacity="0.95"/>
+          <!-- Bottom-right pavilion -->
+          <polygon points="86,40 50,40 50,104" fill="url(#gem-br)" opacity="0.9"/>
+          <!-- Girdle line -->
+          <line x1="14" y1="40" x2="86" y2="40" stroke="rgba(255,255,255,0.45)" stroke-width="1"/>
+          <!-- Top highlight -->
+          <polygon points="50,8 68,34 50,34" fill="rgba(255,255,255,0.32)"/>
+          <polygon points="50,8 32,34 50,34" fill="rgba(255,255,255,0.14)"/>
+        </svg>
+
+        <h1 class="game-title">Diamond Painting</h1>
+        <p class="game-subtitle">Fill the grid · Reveal the art</p>
         <button id="btn-play" class="btn btn-primary">Play</button>
         <button id="btn-leaderboard" class="btn btn-secondary">🏆 Leaderboard</button>
       </div>
@@ -32,6 +103,7 @@
     <div id="screen-game" class="screen">
       <div id="game-header">
         <button class="btn-back" id="btn-back-game">←</button>
+        <span id="level-name-display" class="level-name-display"></span>
         <div id="progress-wrap">
           <div id="progress-bar"><div id="progress-fill"></div></div>
           <span id="progress-text">0%</span>
@@ -59,6 +131,7 @@
         <button id="btn-back-select2" class="btn btn-secondary">Level Select</button>
       </div>
     </div>
+
   </div>
 
   <script type="module" src="src/main.js"></script>
