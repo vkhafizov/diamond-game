@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Diamond Painting</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="//yandex.ru/games/sdk/v2"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Start Screen -->
+    <div id="screen-start" class="screen active">
+      <div class="start-content">
+        <h1 class="game-title">💎 Diamond Painting</h1>
+        <p class="game-subtitle">Fill the grid and reveal the art</p>
+        <button id="btn-play" class="btn btn-primary">Play</button>
+        <button id="btn-leaderboard" class="btn btn-secondary">🏆 Leaderboard</button>
+      </div>
+    </div>
+
+    <!-- Level Select Screen -->
+    <div id="screen-select" class="screen">
+      <div class="screen-header">
+        <button class="btn-back" id="btn-back-select">←</button>
+        <h2>Choose a Picture</h2>
+      </div>
+      <div id="level-grid" class="level-grid"></div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="screen-game" class="screen">
+      <div id="game-header">
+        <button class="btn-back" id="btn-back-game">←</button>
+        <div id="progress-wrap">
+          <div id="progress-bar"><div id="progress-fill"></div></div>
+          <span id="progress-text">0%</span>
+        </div>
+        <button id="btn-hint" class="btn-icon" title="Bucket fill hint">🪣</button>
+      </div>
+
+      <div id="canvas-wrap">
+        <canvas id="game-canvas"></canvas>
+      </div>
+
+      <div id="palette-tray">
+        <div id="palette-colors"></div>
+      </div>
+    </div>
+
+    <!-- Complete Screen -->
+    <div id="screen-complete" class="screen">
+      <div class="complete-content">
+        <h2>Level Complete! 🎉</h2>
+        <div id="complete-image-wrap"></div>
+        <div id="star-rating" class="star-rating"></div>
+        <p id="complete-score"></p>
+        <button id="btn-next-level" class="btn btn-primary">Next Level</button>
+        <button id="btn-back-select2" class="btn btn-secondary">Level Select</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
