@@ -1,0 +1,302 @@
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #1a1a2e;
+  --bg2: #16213e;
+  --accent: #e94560;
+  --accent2: #0f3460;
+  --text: #eaeaea;
+  --text-dim: #888;
+  --card: #0f3460;
+  --btn-radius: 12px;
+  --palette-h: 80px;
+  --header-h: 52px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', sans-serif;
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* ===== Screens ===== */
+#app { width: 100%; height: 100%; position: relative; }
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.screen.active { display: flex; }
+
+/* ===== Start Screen ===== */
+.start-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px;
+}
+
+.game-title {
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #fff 30%, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+}
+
+.game-subtitle {
+  color: var(--text-dim);
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+/* ===== Buttons ===== */
+.btn {
+  padding: 14px 36px;
+  border: none;
+  border-radius: var(--btn-radius);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+  min-width: 200px;
+  text-align: center;
+}
+.btn:active { transform: scale(0.96); }
+
+.btn-primary {
+  background: linear-gradient(135deg, #e94560, #a855f7);
+  color: #fff;
+}
+
+.btn-secondary {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid #ffffff22;
+}
+
+.btn-back {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.btn-back:hover { background: #ffffff15; }
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.btn-icon:hover { background: #ffffff15; }
+
+/* ===== Level Select ===== */
+#screen-select {
+  justify-content: flex-start;
+  padding-top: 0;
+}
+
+.screen-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid #ffffff10;
+  height: var(--header-h);
+  flex-shrink: 0;
+}
+
+.screen-header h2 { font-size: 1.2rem; }
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+  padding: 20px;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 700px;
+  align-self: center;
+}
+
+.level-card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s, transform 0.15s;
+  user-select: none;
+}
+.level-card:hover { border-color: #a855f7; transform: translateY(-2px); }
+.level-card.locked { opacity: 0.45; cursor: not-allowed; }
+.level-card.completed { border-color: #22c55e; }
+
+.level-card .level-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.level-card .level-preview canvas { width: 100%; height: 100%; }
+
+.level-card .level-name { font-size: 0.9rem; font-weight: 600; text-align: center; }
+.level-card .level-meta { font-size: 0.75rem; color: var(--text-dim); }
+.level-card .level-stars { font-size: 1rem; letter-spacing: 2px; }
+
+/* ===== Game Screen ===== */
+#screen-game {
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
+#game-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg2);
+  border-bottom: 1px solid #ffffff10;
+  height: var(--header-h);
+  flex-shrink: 0;
+}
+
+#progress-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#progress-bar {
+  flex: 1;
+  height: 10px;
+  background: #ffffff15;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+#progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a855f7, #e94560);
+  border-radius: 999px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+#progress-text { font-size: 0.8rem; color: var(--text-dim); min-width: 32px; }
+
+#canvas-wrap {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: crosshair;
+}
+
+#game-canvas {
+  display: block;
+  touch-action: none;
+}
+
+/* ===== Palette Tray ===== */
+#palette-tray {
+  height: var(--palette-h);
+  background: var(--bg2);
+  border-top: 1px solid #ffffff10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  flex-shrink: 0;
+}
+
+#palette-colors {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 0;
+  max-width: 100%;
+}
+
+.palette-swatch {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #000;
+  text-shadow: 0 0 3px #fff8;
+  user-select: none;
+}
+.palette-swatch:active { transform: scale(0.92); }
+.palette-swatch.selected {
+  border-color: #fff;
+  transform: scale(1.12);
+  box-shadow: 0 0 12px #ffffff88;
+}
+
+/* ===== Complete Screen ===== */
+.complete-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px;
+  text-align: center;
+}
+
+.complete-content h2 { font-size: 2rem; font-weight: 900; }
+
+#complete-image-wrap canvas {
+  border-radius: 12px;
+  box-shadow: 0 4px 32px #a855f766;
+  max-width: min(280px, 80vw);
+  max-height: min(280px, 40vh);
+}
+
+.star-rating { font-size: 2.5rem; letter-spacing: 6px; }
+
+#complete-score { color: var(--text-dim); font-size: 1rem; }
+
+/* ===== Utility ===== */
+.hidden { display: none !important; }
+
+/* ===== Responsive tweaks ===== */
+@media (max-width: 400px) {
+  .palette-swatch { width: 44px; height: 44px; }
+  .btn { min-width: 160px; padding: 12px 24px; }
+}
