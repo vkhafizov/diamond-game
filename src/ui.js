@@ -30,7 +30,7 @@ export function buildLevelGrid(container, state, onSelect) {
     const previewCanvas = document.createElement('canvas');
     previewCanvas.width  = level.width;
     previewCanvas.height = level.height;
-    previewCanvas.style.cssText = 'width:80px;height:80px;image-rendering:pixelated';
+    previewCanvas.style.cssText = 'width:110px;height:110px;image-rendering:pixelated';
     renderPreview(previewCanvas, level);
     previewWrap.appendChild(previewCanvas);
 

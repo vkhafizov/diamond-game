@@ -85,6 +85,10 @@ function startLevel(levelId) {
     (pct) => {
       progressFill.style.width = pct + '%';
       progressText.textContent = pct + '%';
+      // Brief brightness pulse on the bar
+      progressFill.classList.remove('progress-pulse');
+      void progressFill.offsetWidth; // force reflow to restart animation
+      progressFill.classList.add('progress-pulse');
     },
     // onComplete
     async (score, stars) => {
