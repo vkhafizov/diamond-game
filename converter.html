@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Diamond Game – Level Converter</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    min-height: 100vh;
+    padding: 32px 20px;
+  }
+  h1 { font-size: 1.5rem; color: #a78bfa; margin-bottom: 6px; }
+  p.sub { color: #8b949e; font-size: 0.9rem; margin-bottom: 28px; }
+  .panel {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    max-width: 760px;
+  }
+  h2 { font-size: 1rem; color: #cdd9e5; margin-bottom: 14px; }
+  label { display: block; font-size: 0.85rem; color: #8b949e; margin-bottom: 4px; }
+  input[type=file], input[type=text], input[type=number], select {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    color: #e6edf3;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    margin-bottom: 14px;
+  }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 140px; }
+  button {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 22px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  button:hover { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+  .preview-area {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  canvas { border-radius: 8px; image-rendering: pixelated; }
+  #source-canvas { border: 1px solid #30363d; }
+  #result-canvas { border: 1px solid #a78bfa; }
+  textarea {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    color: #79c0ff;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.78rem;
+    padding: 14px;
+    min-height: 280px;
+    resize: vertical;
+    margin-top: 12px;
+  }
+  .tip {
+    background: rgba(124,58,237,0.1);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: #c4b5fd;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+  .tip a { color: #a78bfa; }
+  .palette-preview { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .swatch {
+    width: 30px; height: 30px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; font-weight: bold; color: #000;
+  }
+  #status { color: #56d364; font-size: 0.85rem; margin-top: 8px; min-height: 20px; }
+</style>
+</head>
+<body>
+<h1>Diamond Game – Level Converter</h1>
+<p class="sub">Convert any image into a playable diamond painting level.</p>
+
+<div class="tip">
+  💡 <strong>Where to get beautiful pixel art:</strong><br>
+  • <a href="https://lospec.com/palette-list" target="_blank">lospec.com</a> — free pixel art palettes &amp; sprites<br>
+  • <a href="https://opengameart.org" target="_blank">opengameart.org</a> — free game art (filter by 2D)<br>
+  • <a href="https://www.spriters-resource.com" target="_blank">spriters-resource.com</a> — classic game sprites<br>
+  • Any small PNG image works — the converter will auto-resize and quantize colors.
+</div>
+
+<div class="panel">
+  <h2>1. Load Image</h2>
+  <label>Upload image file (PNG/JPG/GIF/WebP)</label>
+  <input type="file" id="file-input" accept="image/*">
+  <label>— or paste image URL —</label>
+  <div style="display:flex;gap:10px;align-items:center">
+    <input type="text" id="url-input" placeholder="https://example.com/sprite.png" style="margin-bottom:0">
+    <button onclick="loadURL()" style="white-space:nowrap;margin-top:0">Load URL</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>2. Settings</h2>
+  <div class="row">
+    <div class="col">
+      <label>Level name</label>
+      <input type="text" id="level-name" value="My Level">
+    </div>
+    <div class="col">
+      <label>Level ID (must be unique)</label>
+      <input type="number" id="level-id" value="31" min="1">
+    </div>
+    <div class="col">
+      <label>Category</label>
+      <select id="category">
+        <option>Animals</option>
+        <option>Nature</option>
+        <option>Food</option>
+        <option>Ocean</option>
+        <option>Fantasy</option>
+        <option>Space</option>
+        <option>Symbols</option>
+        <option>Art</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="col">
+      <label>Difficulty</label>
+      <select id="difficulty">
+        <option>Easy</option>
+        <option selected>Medium</option>
+        <option>Hard</option>
+        <option>Expert</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <label>Grid width (cells)</label>
+      <input type="number" id="grid-w" value="20" min="8" max="40">
+    </div>
+    <div class="col">
+      <label>Grid height (cells)</label>
+      <input type="number" id="grid-h" value="20" min="8" max="40">
+    </div>
+    <div class="col">
+      <label>Max colors (palette size)</label>
+      <input type="number" id="max-colors" value="8" min="2" max="12">
+    </div>
+    <div class="col">
+      <label>Empty threshold (0–255)</label>
+      <input type="number" id="threshold" value="30" min="0" max="200"
+             title="Pixels with alpha below this become empty cells (0)">
+    </div>
+  </div>
+  <button onclick="convert()">Convert →</button>
+  <div id="status"></div>
+</div>
+
+<div class="panel">
+  <h2>3. Preview</h2>
+  <div class="preview-area">
+    <div>
+      <div style="font-size:0.8rem;color:#8b949e;margin-bottom:6px">Source (resized)</div>
+      <canvas id="source-canvas" width="200" height="200" style="width:200px;height:200px"></canvas>
+    </div>
+    <div>
+      <div style="font-size:0.8rem;color:#8b949e;margin-bottom:6px">Quantized preview</div>
+      <canvas id="result-canvas" width="200" height="200" style="width:200px;height:200px"></canvas>
+    </div>
+    <div>
+      <div style="font-size:0.8rem;color:#8b949e;margin-bottom:6px">Palette</div>
+      <div class="palette-preview" id="palette-preview"></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>4. Generated Code</h2>
+  <p style="font-size:0.82rem;color:#8b949e;margin-bottom:8px">
+    Copy this and paste it into <code style="color:#79c0ff">src/levels.js</code> —
+    add the const before the LEVELS export, and add the object into the LEVELS array.
+  </p>
+  <button onclick="copyCode()">Copy to clipboard</button>
+  <textarea id="output" readonly placeholder="Convert an image first…"></textarea>
+</div>
+
+<script>
+let sourceImage = null;
+
+// ── Image loading ─────────────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadImageSrc(ev.target.result);
+  reader.readAsDataURL(file);
+});
+
+function loadURL() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) return;
+  loadImageSrc(url);
+}
+
+function loadImageSrc(src) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    sourceImage = img;
+    setStatus('Image loaded (' + img.width + '×' + img.height + '). Click Convert →');
+    // Show tiny source preview
+    const sc = document.getElementById('source-canvas');
+    const ctx = sc.getContext('2d');
+    ctx.clearRect(0, 0, sc.width, sc.height);
+    // Draw centered, fit
+    const scale = Math.min(200 / img.width, 200 / img.height);
+    const dw = Math.round(img.width * scale);
+    const dh = Math.round(img.height * scale);
+    ctx.drawImage(img, (200 - dw) / 2, (200 - dh) / 2, dw, dh);
+  };
+  img.onerror = () => setStatus('⚠ Could not load image (CORS or invalid URL)');
+  img.src = src;
+}
+
+// ── Conversion ────────────────────────────────────────────────────────────
+function convert() {
+  if (!sourceImage) { setStatus('⚠ Load an image first.'); return; }
+
+  const W = Math.max(8, Math.min(40, parseInt(document.getElementById('grid-w').value) || 20));
+  const H = Math.max(8, Math.min(40, parseInt(document.getElementById('grid-h').value) || 20));
+  const maxColors = Math.max(2, Math.min(12, parseInt(document.getElementById('max-colors').value) || 8));
+  const alphaThreshold = parseInt(document.getElementById('threshold').value) || 30;
+
+  // Resize source to grid size
+  const offscreen = new OffscreenCanvas(W, H);
+  const octx = offscreen.getContext('2d');
+  octx.drawImage(sourceImage, 0, 0, W, H);
+  const imageData = octx.getImageData(0, 0, W, H);
+  const data = imageData.data; // RGBA flat
+
+  // Collect non-transparent pixels
+  const pixels = [];
+  const pixelMap = []; // index → pixels array index or -1
+  for (let i = 0; i < W * H; i++) {
+    const a = data[i * 4 + 3];
+    if (a < alphaThreshold) {
+      pixelMap.push(-1); // transparent = empty cell
+    } else {
+      pixelMap.push(pixels.length);
+      pixels.push([data[i*4], data[i*4+1], data[i*4+2]]);
+    }
+  }
+
+  if (pixels.length === 0) {
+    setStatus('⚠ All pixels are transparent. Lower the threshold.');
+    return;
+  }
+
+  // k-means color quantization
+  const palette = kMeans(pixels, maxColors);
+
+  // Assign each pixel to nearest palette color
+  const assignment = pixels.map(p => nearestIdx(p, palette));
+
+  // Build cells array (0 = empty, 1..n = palette id)
+  const cells = new Array(W * H).fill(0);
+  for (let i = 0; i < W * H; i++) {
+    if (pixelMap[i] === -1) continue;
+    cells[i] = assignment[pixelMap[i]] + 1; // 1-indexed
+  }
+
+  // Render quantized preview
+  const rc = document.getElementById('result-canvas');
+  rc.width = W; rc.height = H;
+  rc.style.width = '200px'; rc.style.height = '200px';
+  const rctx = rc.getContext('2d');
+  const rimg = rctx.createImageData(W, H);
+  for (let i = 0; i < W * H; i++) {
+    const ci = cells[i];
+    if (ci === 0) {
+      rimg.data[i*4+3] = 0; // transparent
+    } else {
+      const [r, g, b] = palette[ci - 1];
+      rimg.data[i*4]   = r;
+      rimg.data[i*4+1] = g;
+      rimg.data[i*4+2] = b;
+      rimg.data[i*4+3] = 255;
+    }
+  }
+  rctx.putImageData(rimg, 0, 0);
+
+  // Palette preview swatches
+  const pp = document.getElementById('palette-preview');
+  pp.innerHTML = '';
+  const hexPalette = palette.map(([r,g,b]) => '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join(''));
+  hexPalette.forEach((hex, i) => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch';
+    sw.style.background = hex;
+    sw.title = hex;
+    sw.textContent = i + 1;
+    // Adjust text color for legibility
+    const brightness = palette[i][0]*0.299 + palette[i][1]*0.587 + palette[i][2]*0.114;
+    sw.style.color = brightness > 128 ? '#000' : '#fff';
+    pp.appendChild(sw);
+  });
+
+  // Generate code
+  const name = document.getElementById('level-name').value.trim() || 'MyLevel';
+  const id   = parseInt(document.getElementById('level-id').value) || 31;
+  const cat  = document.getElementById('category').value;
+  const diff = document.getElementById('difficulty').value;
+  const constName = name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+
+  let code = `/* ─ ${name} (${W}×${H}) ${diff} · ${cat} ─ */\n`;
+  code += `const ${constName} = rows([\n`;
+  for (let y = 0; y < H; y++) {
+    const row = cells.slice(y * W, (y + 1) * W);
+    code += '  [' + row.join(',') + '],\n';
+  }
+  code += `]);\n\n`;
+
+  code += `// ── Add this object to the LEVELS array in src/levels.js ──\n`;
+  code += `{\n`;
+  code += `  id: ${id}, name: '${name}', category: '${cat}',\n`;
+  code += `  width: ${W}, height: ${H}, difficulty: '${diff}',\n`;
+  code += `  palette: [\n`;
+  hexPalette.forEach((hex, i) => {
+    code += `    { id: ${i+1}, color: '${hex}', label: 'Color ${i+1}' },\n`;
+  });
+  code += `  ],\n`;
+  code += `  cells: ${constName},\n`;
+  code += `},\n`;
+
+  document.getElementById('output').value = code;
+  setStatus(`✓ Done! ${palette.length} colors, ${cells.filter(c=>c>0).length} filled cells out of ${W*H}.`);
+}
+
+function copyCode() {
+  const ta = document.getElementById('output');
+  if (!ta.value) return;
+  navigator.clipboard.writeText(ta.value).then(() => setStatus('✓ Copied to clipboard!'));
+}
+
+function setStatus(msg) {
+  document.getElementById('status').textContent = msg;
+}
+
+// ── k-means ───────────────────────────────────────────────────────────────
+function kMeans(pixels, k) {
+  if (pixels.length <= k) return pixels.slice();
+  // Init: spread seeds via k-means++
+  let centers = [pixels[Math.floor(Math.random() * pixels.length)]];
+  while (centers.length < k) {
+    const dists = pixels.map(p => {
+      let minD = Infinity;
+      for (const c of centers) { const d = dist2(p, c); if (d < minD) minD = d; }
+      return minD;
+    });
+    const sum = dists.reduce((a,b) => a+b, 0);
+    let r = Math.random() * sum, cum = 0;
+    for (let i = 0; i < pixels.length; i++) {
+      cum += dists[i];
+      if (cum >= r) { centers.push(pixels[i]); break; }
+    }
+  }
+
+  // Iterate
+  for (let iter = 0; iter < 20; iter++) {
+    const sums = centers.map(() => [0, 0, 0]);
+    const counts = new Array(k).fill(0);
+    for (const p of pixels) {
+      const ci = nearestIdx(p, centers);
+      sums[ci][0] += p[0]; sums[ci][1] += p[1]; sums[ci][2] += p[2];
+      counts[ci]++;
+    }
+    let changed = false;
+    for (let i = 0; i < k; i++) {
+      if (counts[i] === 0) continue;
+      const nc = [
+        Math.round(sums[i][0] / counts[i]),
+        Math.round(sums[i][1] / counts[i]),
+        Math.round(sums[i][2] / counts[i]),
+      ];
+      if (nc[0] !== centers[i][0] || nc[1] !== centers[i][1] || nc[2] !== centers[i][2]) {
+        centers[i] = nc; changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+
+  // Filter out centers with no assigned pixels (in case k > distinct colors)
+  return centers.filter((c, i) => {
+    return pixels.some(p => nearestIdx(p, centers) === i);
+  }).slice(0, k);
+}
+
+function dist2(a, b) {
+  return (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2;
+}
+
+function nearestIdx(p, centers) {
+  let best = 0, bestD = Infinity;
+  for (let i = 0; i < centers.length; i++) {
+    const d = dist2(p, centers[i]);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+</script>
+</body>
+</html>

@@ -12,11 +12,92 @@
 </head>
 <body>
   <canvas id="aurora-bg" aria-hidden="true"></canvas>
+
+  <!-- ══════════════════════════════════════════
+       Burger Button (hidden on start screen)
+  ══════════════════════════════════════════ -->
+  <button id="btn-burger" class="btn-burger" aria-label="Menu">
+    <span class="burger-line"></span>
+    <span class="burger-line"></span>
+    <span class="burger-line"></span>
+  </button>
+
+  <!-- ══════════════════════════════════════════
+       Nav Drawer
+  ══════════════════════════════════════════ -->
+  <div id="nav-backdrop" class="nav-backdrop"></div>
+  <div id="nav-drawer" class="nav-drawer" role="dialog" aria-modal="true">
+    <div class="drawer-header">
+      <svg class="drawer-gem" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="dg-tl" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#7c3aed"/>
+          </linearGradient>
+          <linearGradient id="dg-tr" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#0891b2"/>
+          </linearGradient>
+          <linearGradient id="dg-bl" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#4c1d95"/><stop offset="100%" stop-color="#6d28d9"/>
+          </linearGradient>
+          <linearGradient id="dg-br" x1="100%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#164e63"/><stop offset="100%" stop-color="#0e7490"/>
+          </linearGradient>
+        </defs>
+        <polygon points="50,6 14,40 50,40" fill="url(#dg-tl)"/>
+        <polygon points="50,6 86,40 50,40" fill="url(#dg-tr)" opacity="0.9"/>
+        <polygon points="14,40 50,40 50,104" fill="url(#dg-bl)" opacity="0.95"/>
+        <polygon points="86,40 50,40 50,104" fill="url(#dg-br)" opacity="0.9"/>
+        <line x1="14" y1="40" x2="86" y2="40" stroke="rgba(255,255,255,0.45)" stroke-width="1"/>
+        <polygon points="50,8 68,34 50,34" fill="rgba(255,255,255,0.32)"/>
+      </svg>
+      <span class="drawer-title">Diamond Painting</span>
+    </div>
+
+    <div class="drawer-divider"></div>
+
+    <nav class="drawer-nav">
+      <button class="drawer-nav-item hidden" id="dnav-continue">
+        <span class="dnav-icon">▶️</span>
+        <span data-i18n="drawer_continue">Continue Game</span>
+      </button>
+      <div class="drawer-sub-divider hidden" id="dnav-continue-sep"></div>
+      <button class="drawer-nav-item" id="dnav-home">
+        <span class="dnav-icon">🏠</span>
+        <span data-i18n="drawer_home">Home</span>
+      </button>
+      <button class="drawer-nav-item" id="dnav-play">
+        <span class="dnav-icon">▶</span>
+        <span data-i18n="drawer_level_select">Level Select</span>
+      </button>
+      <button class="drawer-nav-item" id="dnav-gallery">
+        <span class="dnav-icon">🖼️</span>
+        <span data-i18n="drawer_gallery">Gallery</span>
+      </button>
+      <button class="drawer-nav-item" id="dnav-settings">
+        <span class="dnav-icon">⚙</span>
+        <span data-i18n="drawer_settings">Settings</span>
+      </button>
+      <button class="drawer-nav-item" id="dnav-about">
+        <span class="dnav-icon">ℹ</span>
+        <span data-i18n="drawer_about">About</span>
+      </button>
+      <button class="drawer-nav-item" id="dnav-leaderboard">
+        <span class="dnav-icon">🏆</span>
+        <span data-i18n="drawer_leaderboard">Leaderboard</span>
+      </button>
+    </nav>
+
+    <div class="drawer-footer">
+      <span class="drawer-version" data-i18n="about_version">Version 1.0</span>
+    </div>
+  </div>
+
   <div id="app">
 
-    <!-- Start Screen -->
+    <!-- ══════════════════════════════════════════
+         Start Screen
+    ══════════════════════════════════════════ -->
     <div id="screen-start" class="screen active">
-      <!-- Decorative floating gems -->
       <div class="start-gems" aria-hidden="true">
         <svg class="gem" style="--d:5.5s;--delay:0s;width:46px;top:9%;left:7%;opacity:0.2" viewBox="0 0 50 55">
           <polygon points="25,3 47,20 25,52 3,20" fill="#a78bfa"/>
@@ -49,67 +130,89 @@
       </div>
 
       <div class="start-content">
-        <!-- Animated diamond logo -->
         <svg class="game-logo" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <defs>
             <linearGradient id="gem-tl" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#c4b5fd"/>
-              <stop offset="100%" stop-color="#7c3aed"/>
+              <stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#7c3aed"/>
             </linearGradient>
             <linearGradient id="gem-tr" x1="100%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#67e8f9"/>
-              <stop offset="100%" stop-color="#0891b2"/>
+              <stop offset="0%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#0891b2"/>
             </linearGradient>
             <linearGradient id="gem-bl" x1="0%" y1="100%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#4c1d95"/>
-              <stop offset="100%" stop-color="#6d28d9"/>
+              <stop offset="0%" stop-color="#4c1d95"/><stop offset="100%" stop-color="#6d28d9"/>
             </linearGradient>
             <linearGradient id="gem-br" x1="100%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stop-color="#164e63"/>
-              <stop offset="100%" stop-color="#0e7490"/>
+              <stop offset="0%" stop-color="#164e63"/><stop offset="100%" stop-color="#0e7490"/>
             </linearGradient>
           </defs>
-          <!-- Top-left crown -->
           <polygon points="50,6 14,40 50,40" fill="url(#gem-tl)"/>
-          <!-- Top-right crown -->
           <polygon points="50,6 86,40 50,40" fill="url(#gem-tr)" opacity="0.9"/>
-          <!-- Bottom-left pavilion -->
           <polygon points="14,40 50,40 50,104" fill="url(#gem-bl)" opacity="0.95"/>
-          <!-- Bottom-right pavilion -->
           <polygon points="86,40 50,40 50,104" fill="url(#gem-br)" opacity="0.9"/>
-          <!-- Girdle line -->
           <line x1="14" y1="40" x2="86" y2="40" stroke="rgba(255,255,255,0.45)" stroke-width="1"/>
-          <!-- Top highlight -->
           <polygon points="50,8 68,34 50,34" fill="rgba(255,255,255,0.32)"/>
           <polygon points="50,8 32,34 50,34" fill="rgba(255,255,255,0.14)"/>
         </svg>
 
         <h1 class="game-title">Diamond<br>Painting</h1>
-        <p class="game-subtitle">Fill the grid · Reveal the art</p>
-        <button id="btn-play" class="btn btn-primary">Play</button>
-        <button id="btn-leaderboard" class="btn btn-secondary">🏆 Leaderboard</button>
+        <p class="game-subtitle" data-i18n="game_subtitle">Fill the grid · Reveal the art</p>
+
+        <button id="btn-continue"    class="btn btn-primary hidden" data-i18n="btn_continue">Continue</button>
+        <button id="btn-play"        class="btn btn-primary"   data-i18n="btn_play">New Game</button>
+        <button id="btn-leaderboard" class="btn btn-secondary" data-i18n="btn_leaderboard">🏆 Leaderboard</button>
+        <button id="btn-gallery"     class="btn btn-secondary">🖼️ <span data-i18n="btn_gallery">Gallery</span></button>
+
+        <div class="start-menu-row">
+          <button id="btn-settings" class="btn btn-ghost" data-i18n="btn_settings">⚙ Settings</button>
+          <button id="btn-about"    class="btn btn-ghost" data-i18n="btn_about">ℹ About</button>
+        </div>
       </div>
     </div>
 
-    <!-- Level Select Screen -->
+    <!-- ══════════════════════════════════════════
+         Category Select Screen
+    ══════════════════════════════════════════ -->
+    <div id="screen-categories" class="screen">
+      <div class="screen-header">
+        <button class="btn-back" id="btn-back-categories">←</button>
+        <h2 data-i18n="screen_categories_title">Choose a Category</h2>
+      </div>
+      <div id="category-grid" class="cat-grid"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         Level Select Screen
+    ══════════════════════════════════════════ -->
     <div id="screen-select" class="screen">
       <div class="screen-header">
         <button class="btn-back" id="btn-back-select">←</button>
-        <h2>Choose a Picture</h2>
+        <h2 id="select-category-title">Pictures</h2>
       </div>
       <div id="level-grid" class="level-grid"></div>
     </div>
 
-    <!-- Game Screen -->
+    <!-- ══════════════════════════════════════════
+         Gallery Screen
+    ══════════════════════════════════════════ -->
+    <div id="screen-gallery" class="screen">
+      <div class="screen-header">
+        <button class="btn-back" id="btn-back-gallery">←</button>
+        <h2 data-i18n="drawer_gallery">Gallery</h2>
+      </div>
+      <div id="gallery-grid" class="gallery-grid"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         Game Screen
+    ══════════════════════════════════════════ -->
     <div id="screen-game" class="screen">
       <div id="game-header">
         <button class="btn-back" id="btn-back-game">←</button>
-        <span id="level-name-display" class="level-name-display"></span>
         <div id="progress-wrap">
           <div id="progress-bar"><div id="progress-fill"></div></div>
           <span id="progress-text">0%</span>
         </div>
-        <button id="btn-hint" class="btn-icon" title="Bucket fill hint">🪣</button>
+        <button id="btn-hint" class="btn-icon" data-i18n-title="progress_hint" title="Bucket fill hint">🪣</button>
       </div>
 
       <div id="canvas-wrap">
@@ -121,18 +224,133 @@
       </div>
     </div>
 
-    <!-- Complete Screen -->
+    <!-- ══════════════════════════════════════════
+         Complete Screen
+    ══════════════════════════════════════════ -->
     <div id="screen-complete" class="screen">
       <div class="complete-content">
-        <h2>Level Complete! 🎉</h2>
+        <h2 id="complete-title" class="screen-floating-title" data-i18n="complete_title">Level Complete! 🎉</h2>
         <div id="complete-image-wrap"></div>
         <div id="star-rating" class="star-rating"></div>
         <p id="complete-score"></p>
-        <button id="btn-next-level" class="btn btn-primary">Next Level</button>
-        <button id="btn-back-select2" class="btn btn-secondary">Level Select</button>
+        <button id="btn-next-level"   class="btn btn-primary"   data-i18n="btn_next_level">Next Level</button>
+        <button id="btn-back-select2" class="btn btn-secondary" data-i18n="btn_level_select">Level Select</button>
       </div>
     </div>
 
+    <!-- ══════════════════════════════════════════
+         Settings Screen
+    ══════════════════════════════════════════ -->
+    <div id="screen-settings" class="screen">
+      <div class="screen-header">
+        <button class="btn-back" id="btn-back-settings">←</button>
+        <h2 data-i18n="screen_settings_title">Settings</h2>
+      </div>
+
+      <div class="settings-content">
+        <div class="settings-card">
+          <div class="setting-row">
+            <div class="setting-row-info">
+              <span class="setting-icon">🎵</span>
+              <span class="setting-label" data-i18n="setting_sound">Music</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-music" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="setting-divider"></div>
+          <div class="setting-row">
+            <div class="setting-row-info">
+              <span class="setting-icon">🔔</span>
+              <span class="setting-label" data-i18n="setting_sfx">Sound Effects</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-sfx" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="setting-divider"></div>
+          <div class="setting-row">
+            <div class="setting-row-info">
+              <span class="setting-icon">✨</span>
+              <span class="setting-label" data-i18n="setting_particles">Particle Effects</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-particles" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-section-label" data-i18n="setting_language">Language</div>
+          <div id="language-grid" class="language-grid"></div>
+        </div>
+
+        <div class="settings-card settings-card--danger">
+          <button id="btn-reset-progress" class="btn btn-danger" data-i18n="setting_reset">Reset Progress</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         About Screen
+    ══════════════════════════════════════════ -->
+    <div id="screen-about" class="screen">
+      <div class="screen-header">
+        <button class="btn-back" id="btn-back-about">←</button>
+        <h2 data-i18n="screen_about_title">About</h2>
+      </div>
+
+      <div class="about-content">
+        <div class="about-logo-wrap">
+          <svg class="about-logo" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <polygon points="50,6 14,40 50,40" fill="url(#gem-tl)"/>
+            <polygon points="50,6 86,40 50,40" fill="url(#gem-tr)" opacity="0.9"/>
+            <polygon points="14,40 50,40 50,104" fill="url(#gem-bl)" opacity="0.95"/>
+            <polygon points="86,40 50,40 50,104" fill="url(#gem-br)" opacity="0.9"/>
+            <line x1="14" y1="40" x2="86" y2="40" stroke="rgba(255,255,255,0.45)" stroke-width="1"/>
+            <polygon points="50,8 68,34 50,34" fill="rgba(255,255,255,0.32)"/>
+          </svg>
+          <div class="about-logo-text">
+            <span class="about-game-name">Diamond Painting</span>
+            <span class="about-tagline" data-i18n="about_tagline">Fill the grid · Reveal the art</span>
+          </div>
+        </div>
+
+        <div class="about-card">
+          <p class="about-desc" data-i18n="about_desc">
+            Diamond Painting is a relaxing puzzle game where you place glittering diamonds cell by cell to reveal beautiful pixel-art masterpieces.
+          </p>
+        </div>
+
+        <div class="about-card">
+          <h3 class="about-section-title" data-i18n="about_controls">How to Play</h3>
+          <ul class="about-controls-list">
+            <li><span class="about-ctrl-icon">💎</span><span data-i18n="about_ctrl_tap">Tap a cell to place a diamond</span></li>
+            <li><span class="about-ctrl-icon">✋</span><span data-i18n="about_ctrl_drag">Drag to pan the canvas</span></li>
+            <li><span class="about-ctrl-icon">🤏</span><span data-i18n="about_ctrl_pinch">Pinch or scroll to zoom</span></li>
+          </ul>
+        </div>
+
+        <div class="about-footer">
+          <span class="about-version" data-i18n="about_version">Version 1.0</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       Gallery Lightbox
+  ══════════════════════════════════════════ -->
+  <div id="gallery-lightbox" class="lightbox-overlay">
+    <button class="lightbox-close" id="lightbox-close" aria-label="Close">✕</button>
+    <div class="lightbox-inner">
+      <canvas id="lightbox-canvas"></canvas>
+      <div id="lightbox-name" class="lightbox-name"></div>
+    </div>
   </div>
 
   <script type="module" src="src/main.js"></script>
