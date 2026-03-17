@@ -61,10 +61,16 @@ export class Game {
     this._completedGroups = new Set();
     this._groupFlashes    = new Map();   // colorId → { until }
 
+    // Particles enabled flag (toggled by settings)
+    this._particlesEnabled = true;
+
     // Background particles (Tier 1: ambient crystal dust)
     this._particles = [];
     // Burst particles (Tier 2: placement burst, Tier 3: group cascade)
     this._burstParticles = [];
+    // Shine sparkles on random filled diamonds
+    this._shineSparkles  = [];
+    this._nextShineTime  = 0;
 
     this._bindEvents();
     this._fitToCanvas();
@@ -98,6 +104,18 @@ export class Game {
     return { filledCells: [...this.filled] };
   }
 
+  /** Enable or disable particle effects. */
+  setParticlesEnabled(val) {
+    this._particlesEnabled = Boolean(val);
+    if (!this._particlesEnabled) {
+      this._particles      = [];
+      this._burstParticles = [];
+      this._shineSparkles  = [];
+    } else if (this._particles.length === 0) {
+      this._initParticles();
+    }
+  }
+
   /** Stop the game loop and timers. */
   destroy() {
     this._stopTimer();
@@ -116,16 +134,31 @@ export class Game {
   }
 
   _fitToCanvas() {
-    const { width, height } = this.level;
+    const { width, height, cells } = this.level;
     const cw = this.canvas.width;
     const ch = this.canvas.height;
-    const gridW = width  * CELL_BASE;
-    const gridH = height * CELL_BASE;
-    // Use 0.96 to reduce dead space around board
-    this.zoom    = Math.min(cw / gridW, ch / gridH) * 0.96;
-    this.offsetX = (cw - gridW * this.zoom) / 2;
-    this.offsetY = (ch - gridH * this.zoom) / 2;
+
+    // Center on the bounding box of paintable cells, not the full grid
+    let r0 = height, r1 = 0, c0 = width, c1 = 0;
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i] !== 0) {
+        const r = Math.floor(i / width), c = i % width;
+        r0 = Math.min(r0, r); r1 = Math.max(r1, r);
+        c0 = Math.min(c0, c); c1 = Math.max(c1, c);
+      }
+    }
+    if (r0 > r1) { r0 = 0; r1 = height - 1; c0 = 0; c1 = width - 1; }
+
+    const artCols = c1 - c0 + 1;
+    const artRows = r1 - r0 + 1;
+    this.zoom    = Math.min(cw / (artCols * CELL_BASE), ch / (artRows * CELL_BASE)) * 0.96;
+    const cs     = CELL_BASE * this.zoom;
+    this.offsetX = (cw - artCols * cs) / 2 - c0 * cs;
+    this.offsetY = (ch - artRows * cs) / 2 - r0 * cs;
   }
+
+  /** Re-center art in canvas (call after canvas is resized). */
+  resetView() { this._fitToCanvas(); }
 
   _cellSize() {
     return CELL_BASE * this.zoom;
@@ -153,7 +186,7 @@ export class Game {
     this._flashes.set(idx, { until: Date.now() + 700, correct: true });
     // Entrance bounce animation
     this._cellEnter.set(idx, { start: Date.now(), duration: 450 });
-    this._spawnBurst(idx);
+    if (this._particlesEnabled) this._spawnBurst(idx);
     playPlace();
     this._afterFill();
   }
@@ -175,7 +208,7 @@ export class Game {
         if (filledN >= total) {
           this._completedGroups.add(id);
           this._groupFlashes.set(id, { until: Date.now() + 1000 });
-          this._spawnGroupCascade(id);
+          if (this._particlesEnabled) this._spawnGroupCascade(id);
           playGroupComplete();
         }
       }
@@ -389,6 +422,58 @@ export class Game {
     ctx.globalAlpha = 1;
   }
 
+  // ─── Shine Sparkles ────────────────────────────────────────────────────────
+
+  _updateShineSparkles(now) {
+    const { ctx } = this;
+    const cs = this._cellSize();
+
+    // Spawn a sparkle on a random filled cell every 700–2000 ms
+    if (now >= this._nextShineTime && this.filled.size > 0) {
+      this._nextShineTime = now + 700 + Math.random() * 1300;
+      const filledArr = [...this.filled];
+      const idx = filledArr[Math.floor(Math.random() * filledArr.length)];
+      const col = idx % this.level.width;
+      const row = Math.floor(idx / this.level.width);
+      this._shineSparkles.push({ col, row, startTime: now, duration: 900 + Math.random() * 700 });
+    }
+
+    // Draw and age sparkles
+    for (let i = this._shineSparkles.length - 1; i >= 0; i--) {
+      const sp = this._shineSparkles[i];
+      const progress = (now - sp.startTime) / sp.duration;
+      if (progress >= 1) { this._shineSparkles.splice(i, 1); continue; }
+
+      let alpha = progress < 0.30 ? progress / 0.30
+                : progress < 0.70 ? 1
+                : (1 - progress) / 0.30;
+      alpha = Math.max(0, Math.min(1, alpha)) * 0.90;
+
+      const cx = this.offsetX + sp.col * cs + cs / 2;
+      const cy = this.offsetY + sp.row * cs + cs / 2;
+      const r  = cs * 0.38;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth   = Math.max(0.5, cs * 0.036);
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur  = cs * 0.50;
+      for (let a = 0; a < 4; a++) {
+        const angle = (a / 4) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(angle) * r * 0.18, cy + Math.sin(angle) * r * 0.18);
+        ctx.lineTo(cx + Math.cos(angle) * r,         cy + Math.sin(angle) * r);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(cx, cy, cs * 0.07, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   // ─── Rendering ─────────────────────────────────────────────────────────────
 
   _loop() {
@@ -405,12 +490,8 @@ export class Game {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Background
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     // Tier 1: ambient crystal dust
-    this._updateParticles();
+    if (this._particlesEnabled) this._updateParticles();
 
     const ox = this.offsetX;
     const oy = this.offsetY;
@@ -422,12 +503,8 @@ export class Game {
         const x      = ox + col * cs;
         const y      = oy + row * cs;
 
-        if (target === 0) {
-          // Empty/transparent cell – very dark, distinct from numbered cells
-          ctx.fillStyle = '#101620';
-          ctx.fillRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
-          continue;
-        }
+        // Empty/transparent cells — skip entirely, show only background
+        if (target === 0) continue;
 
         const flash      = this._flashes.get(idx);
         const isFlashing = flash && flash.until > now;
@@ -440,7 +517,6 @@ export class Game {
           if (enterAnim) {
             const t = Math.min(1, (now - enterAnim.start) / enterAnim.duration);
             if (t < 1) {
-              // Elastic ease-out bounce
               const c4 = (2 * Math.PI) / 3;
               enterScale = t === 0 ? 0
                 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
@@ -451,29 +527,46 @@ export class Game {
           }
           this._drawDiamond(ctx, x, y, cs, color, isFlashing && flash.correct, enterScale);
         } else {
-          // Unfilled numbered cell — slightly lighter than empty cells
-          ctx.fillStyle = '#1c2a3e';
-          ctx.fillRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
+          // Unfilled numbered cell — ghost diamond outline + colour-tinted number
+          const color = this.paletteMap.get(target) ?? '#888';
+          const cx2 = x + cs / 2, cy2 = y + cs / 2;
+          const hw2 = cs * 0.40, hh2 = cs * 0.40;
 
+          // Ghost diamond outline
+          ctx.save();
+          ctx.strokeStyle = hexToRgba(color, 0.28);
+          ctx.lineWidth   = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(cx2,       cy2 - hh2);
+          ctx.lineTo(cx2 + hw2, cy2);
+          ctx.lineTo(cx2,       cy2 + hh2);
+          ctx.lineTo(cx2 - hw2, cy2);
+          ctx.closePath();
+          ctx.stroke();
+
+          // Wrong-colour flash
           if (isFlashing && !flash.correct) {
-            ctx.fillStyle = 'rgba(239,68,68,0.45)';
-            ctx.fillRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
+            ctx.fillStyle = 'rgba(239,68,68,0.30)';
+            ctx.beginPath();
+            ctx.moveTo(cx2,       cy2 - hh2);
+            ctx.lineTo(cx2 + hw2, cy2);
+            ctx.lineTo(cx2,       cy2 + hh2);
+            ctx.lineTo(cx2 - hw2, cy2);
+            ctx.closePath();
+            ctx.fill();
           }
 
-          // Number hint — brighter and larger for readability
+          ctx.restore();
+
+          // Number hint
           if (cs >= 14) {
-            ctx.fillStyle    = hexToRgba(this.paletteMap.get(target) ?? '#888', 0.88);
+            ctx.fillStyle    = hexToRgba(color, 0.80);
             ctx.font         = `bold ${Math.max(9, Math.round(cs * 0.44))}px sans-serif`;
             ctx.textAlign    = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(String(target), x + cs / 2, y + cs / 2);
+            ctx.fillText(String(target), cx2, cy2);
           }
         }
-
-        // Grid lines — brighter for better readability
-        ctx.strokeStyle = '#ffffff18';
-        ctx.lineWidth   = 0.5;
-        ctx.strokeRect(x, y, cs, cs);
       }
     }
 
@@ -502,7 +595,10 @@ export class Game {
     }
 
     // Tier 2 & 3: burst + cascade particles (drawn on top of grid)
-    this._updateBurstParticles();
+    if (this._particlesEnabled) this._updateBurstParticles();
+
+    // Shine sparkles on random filled diamonds
+    if (this._particlesEnabled && this.filled.size > 0) this._updateShineSparkles(now);
   }
 
   /**
@@ -817,16 +913,223 @@ export class Game {
  */
 export function renderPreview(canvas, level) {
   const { width, height, cells, palette } = level;
-  const ctx  = canvas.getContext('2d');
-  const cs   = canvas.width / width;
-  const map  = new Map(palette.map(p => [p.id, p.color]));
+  const ctx = canvas.getContext('2d');
+  const map = new Map(palette.map(p => [p.id, p.color]));
+
+  // Crop to art bounding box so the art is centered in the thumbnail
+  let r0 = height, r1 = 0, c0 = width, c1 = 0;
+  for (let r = 0; r < height; r++)
+    for (let c = 0; c < width; c++)
+      if (cells[r * width + c] !== 0) {
+        r0 = Math.min(r0, r); r1 = Math.max(r1, r);
+        c0 = Math.min(c0, c); c1 = Math.max(c1, c);
+      }
+  if (r0 > r1) { r0 = 0; r1 = height - 1; c0 = 0; c1 = width - 1; }
+
+  const artW = c1 - c0 + 1;
+  const artH = r1 - r0 + 1;
+  // cs sized so the art fills the canvas, then offset to center
+  const cs = Math.min(canvas.width / artW, canvas.height / artH);
+  const ox = Math.round((canvas.width  - artW * cs) / 2);
+  const oy = Math.round((canvas.height - artH * cs) / 2);
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#101620';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      const v = cells[r * width + c];
+      if (v === 0) continue;
+      ctx.fillStyle = map.get(v) ?? '#888';
+      ctx.fillRect(ox + (c - c0) * cs, oy + (r - r0) * cs, cs, cs);
+    }
+  }
+}
+
+/**
+ * Draw one diamond cell onto ctx at (x,y) with cell-size cs.
+ * Standalone version of Game._drawDiamond (no entrance scale).
+ */
+export function drawDiamondCell(ctx, x, y, cs, color) {
+  const cx = x + cs / 2;
+  const cy = y + cs / 2;
+  const hw = cs * 0.42;
+  const hh = cs * 0.42;
+
+  function diamondPath() {
+    ctx.beginPath();
+    ctx.moveTo(cx,      cy - hh);
+    ctx.lineTo(cx + hw, cy);
+    ctx.lineTo(cx,      cy + hh);
+    ctx.lineTo(cx - hw, cy);
+    ctx.closePath();
+  }
+
+  ctx.save();
+
+  // Outer glow
+  ctx.shadowColor = hexToRgba(color, 0.7);
+  ctx.shadowBlur  = cs * 0.5;
+  diamondPath();
+  ctx.fillStyle = hexToRgba(color, 0.01);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
+
+  // Radial body
+  diamondPath();
+  const grad = ctx.createRadialGradient(cx - hw*0.22, cy - hh*0.30, 0, cx, cy, hw*1.15);
+  grad.addColorStop(0,    shiftColor(color,  0.62));
+  grad.addColorStop(0.28, shiftColor(color,  0.20));
+  grad.addColorStop(0.58, color);
+  grad.addColorStop(0.82, shiftColor(color, -0.22));
+  grad.addColorStop(1,    shiftColor(color, -0.45));
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Facets
+  ctx.save();
+  diamondPath();
+  ctx.clip();
+  const ulGrad = ctx.createLinearGradient(cx-hw, cy-hh, cx, cy);
+  ulGrad.addColorStop(0, hexToRgba(shiftColor(color, 0.45), 0.55));
+  ulGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = ulGrad;
+  ctx.beginPath(); ctx.moveTo(cx,cy-hh); ctx.lineTo(cx-hw,cy); ctx.lineTo(cx,cy); ctx.closePath(); ctx.fill();
+  const urGrad = ctx.createLinearGradient(cx+hw, cy-hh, cx, cy);
+  urGrad.addColorStop(0, 'rgba(255,255,255,0.38)');
+  urGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = urGrad;
+  ctx.beginPath(); ctx.moveTo(cx,cy-hh); ctx.lineTo(cx+hw,cy); ctx.lineTo(cx,cy); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = hexToRgba(shiftColor(color,-0.30), 0.62);
+  ctx.beginPath(); ctx.moveTo(cx-hw,cy); ctx.lineTo(cx,cy+hh); ctx.lineTo(cx,cy); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = hexToRgba(shiftColor(color,-0.45), 0.55);
+  ctx.beginPath(); ctx.moveTo(cx+hw,cy); ctx.lineTo(cx,cy+hh); ctx.lineTo(cx,cy); ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  // Highlight
+  const hlGrad = ctx.createRadialGradient(cx-hw*0.28, cy-hh*0.32, 0, cx-hw*0.28, cy-hh*0.32, hw*0.52);
+  hlGrad.addColorStop(0, 'rgba(255,255,255,0.82)');
+  hlGrad.addColorStop(0.55,'rgba(255,255,255,0.12)');
+  hlGrad.addColorStop(1,   'rgba(255,255,255,0)');
+  ctx.fillStyle = hlGrad;
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/**
+ * Render a level as full diamond art (all non-zero cells = actual diamonds).
+ */
+export function renderDiamondPreview(canvas, level) {
+  const { width, height, cells, palette } = level;
+  const ctx = canvas.getContext('2d');
+  const cs  = canvas.width / width;
+  const map = new Map(palette.map(p => [p.id, p.color]));
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
       const v = cells[row * width + col];
-      ctx.fillStyle = v === 0 ? '#101620' : (map.get(v) ?? '#888');
-      ctx.fillRect(col * cs, row * cs, cs, cs);
+      if (v === 0) continue;
+      const color = map.get(v) ?? '#888';
+      drawDiamondCell(ctx, col * cs, row * cs, cs, color);
     }
   }
+}
+
+/**
+ * Start a sparkle animation loop on a canvas that already has diamond art rendered.
+ * Returns a stop() function.
+ */
+export function startSparkleAnimation(canvas, level) {
+  const { width, height, cells } = level;
+  const cs = canvas.width / width;
+
+  // Collect filled cell positions
+  const filled = [];
+  for (let i = 0; i < cells.length; i++) {
+    if (cells[i] !== 0) filled.push(i);
+  }
+  if (filled.length === 0) return () => {};
+
+  // Cache the base diamond art so sparkles don't permanently write on it
+  const baseCanvas = document.createElement('canvas');
+  baseCanvas.width  = canvas.width;
+  baseCanvas.height = canvas.height;
+  baseCanvas.getContext('2d').drawImage(canvas, 0, 0);
+
+  // Active sparkles: { col, row, t, duration }
+  const sparkles = [];
+  let last = 0;
+  let rafId = null;
+  let running = true;
+
+  function drawStar(ctx, x, y, r, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = Math.max(0.5, r * 0.15);
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = r * 2;
+    // 4-pointed star
+    for (let a = 0; a < 4; a++) {
+      const angle = (a / 4) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(angle) * r * 0.18, y + Math.sin(angle) * r * 0.18);
+      ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+      ctx.stroke();
+    }
+    // Tiny center dot
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.12, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function frame(ts) {
+    if (!running) return;
+    const dt = ts - last;
+    last = ts;
+
+    // Restore base art each frame so sparkles don't accumulate
+    const ctx2 = canvas.getContext('2d');
+    ctx2.clearRect(0, 0, canvas.width, canvas.height);
+    ctx2.drawImage(baseCanvas, 0, 0);
+
+    // Spawn new sparkle every ~1.8s (randomly between 1–3s)
+    if (sparkles.length < 4 && Math.random() < dt / 1800) {
+      const idx = filled[Math.floor(Math.random() * filled.length)];
+      const col = idx % width;
+      const row = Math.floor(idx / width);
+      sparkles.push({ col, row, t: 0, duration: 900 + Math.random() * 600 });
+    }
+
+    // We only need to overdraw sparkle cells — no full re-render needed
+    for (let i = sparkles.length - 1; i >= 0; i--) {
+      const sp = sparkles[i];
+      sp.t += dt;
+      const progress = sp.t / sp.duration;
+      // Fade in 0→0.3, hold 0.3→0.7, fade out 0.7→1
+      let alpha;
+      if (progress < 0.3) alpha = progress / 0.3;
+      else if (progress < 0.7) alpha = 1;
+      else alpha = (1 - progress) / 0.3;
+      alpha = Math.max(0, Math.min(1, alpha)) * 0.9;
+
+      const cx = sp.col * cs + cs / 2;
+      const cy = sp.row * cs + cs / 2;
+      drawStar(canvas.getContext('2d'), cx, cy, cs * 0.38, alpha);
+
+      if (sp.t >= sp.duration) sparkles.splice(i, 1);
+    }
+
+    rafId = requestAnimationFrame(frame);
+  }
+
+  rafId = requestAnimationFrame(frame);
+  return () => { running = false; if (rafId) cancelAnimationFrame(rafId); };
 }

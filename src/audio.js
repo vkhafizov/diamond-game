@@ -7,6 +7,20 @@
 let _ctx = null;
 let _droneNodes = [];
 
+let _musicEnabled = true;
+let _sfxEnabled   = true;
+
+/** Toggle ambient music on/off. */
+export function setMusicEnabled(val) {
+  _musicEnabled = Boolean(val);
+  if (!_musicEnabled) stopAmbientDrone();
+}
+
+/** Toggle SFX on/off (placement pings, arpeggios, level complete). */
+export function setSfxEnabled(val) {
+  _sfxEnabled = Boolean(val);
+}
+
 function getCtx() {
   if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
   return _ctx;
@@ -19,6 +33,7 @@ const PENTATONIC = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
 
 /** Start a quiet 3-voice meditative pad. Call once on first user interaction. */
 export function startAmbientDrone() {
+  if (!_musicEnabled) return;
   try {
     if (_droneNodes.length) return; // already running
     const ac = getCtx();
@@ -85,6 +100,7 @@ export function stopAmbientDrone() {
 
 /** Crystal ping when placing a diamond correctly. */
 export function playPlace() {
+  if (!_sfxEnabled) return;
   try {
     const ac   = getCtx();
     if (ac.state === 'suspended') ac.resume();
@@ -141,6 +157,7 @@ export function playPlace() {
 
 /** Ascending crystal arpeggio when a full color group is placed. */
 export function playGroupComplete() {
+  if (!_sfxEnabled) return;
   try {
     const ac    = getCtx();
     if (ac.state === 'suspended') ac.resume();
@@ -169,6 +186,7 @@ export function playGroupComplete() {
 
 /** Rising pentatonic sweep + reverb tail when level is fully completed. */
 export function playLevelComplete() {
+  if (!_sfxEnabled) return;
   try {
     const ac   = getCtx();
     if (ac.state === 'suspended') ac.resume();
