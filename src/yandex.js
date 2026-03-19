@@ -18,6 +18,7 @@ export async function initYandex() {
     }
     ysdk   = await YaGames.init();
     player = await ysdk.getPlayer({ scopes: false });
+    ysdk.features.LoadingAPI?.ready();
     console.info('[Yandex] SDK initialized.');
     return true;
   } catch (err) {
@@ -86,8 +87,7 @@ function defaultSave() {
 export async function submitScore(score) {
   if (!ysdk) return;
   try {
-    const lb = await ysdk.getLeaderboards();
-    await lb.setLeaderboardScore('main', score);
+    await ysdk.leaderboards.setLeaderboardScore('main', score);
   } catch (e) {
     console.warn('[Yandex] submitScore failed:', e);
   }
@@ -102,8 +102,7 @@ export async function showLeaderboard() {
     return;
   }
   try {
-    const lb = await ysdk.getLeaderboards();
-    lb.getLeaderboardPlayerEntry('main').catch(() => {});
+    ysdk.leaderboards.getLeaderboardPlayerEntry('main').catch(() => {});
   } catch (e) {
     console.warn('[Yandex] showLeaderboard failed:', e);
   }
@@ -143,6 +142,25 @@ export async function showRewardedAd() {
       },
     });
   });
+}
+
+// ─── Localisation ─────────────────────────────────────────────────────────────
+
+// ─── Gameplay API ─────────────────────────────────────────────────────────────
+
+/**
+ * Signal to Yandex that active gameplay has started.
+ * Helps Yandex optimize interstitial ad delivery.
+ */
+export function gameplayStart() {
+  try { ysdk?.features.GameplayAPI?.start(); } catch (_) {}
+}
+
+/**
+ * Signal to Yandex that active gameplay has stopped (menu, complete screen, ad).
+ */
+export function gameplayStop() {
+  try { ysdk?.features.GameplayAPI?.stop(); } catch (_) {}
 }
 
 // ─── Localisation ─────────────────────────────────────────────────────────────

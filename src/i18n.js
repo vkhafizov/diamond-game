@@ -11,7 +11,7 @@ export const LANGUAGES = [
 const STRINGS = {
   en: {
     game_subtitle:         'Fill the grid · Reveal the art',
-    btn_play:              'New Game',
+    btn_play:              'Play',
     btn_continue:          'Continue',
     btn_leaderboard:       '🏆 Leaderboard',
     btn_settings:          '⚙ Settings',
@@ -21,6 +21,7 @@ const STRINGS = {
     screen_about_title:    'About',
     setting_sound:         'Music',
     setting_sfx:           'Sound Effects',
+    setting_volume:        'Volume',
     setting_particles:     'Particle Effects',
     setting_language:      'Language',
     setting_reset:         'Reset Progress',
@@ -69,7 +70,7 @@ const STRINGS = {
   },
   ru: {
     game_subtitle:         'Заполни сетку · Открой картину',
-    btn_play:              'Новая игра',
+    btn_play:              'Играть',
     btn_continue:          'Продолжить',
     btn_leaderboard:       '🏆 Рейтинг',
     btn_settings:          '⚙ Настройки',
@@ -79,6 +80,7 @@ const STRINGS = {
     screen_about_title:    'Об игре',
     setting_sound:         'Музыка',
     setting_sfx:           'Звуковые эффекты',
+    setting_volume:        'Громкость',
     setting_particles:     'Частицы',
     setting_language:      'Язык',
     setting_reset:         'Сбросить прогресс',
@@ -127,7 +129,7 @@ const STRINGS = {
   },
   tr: {
     game_subtitle:         'Izgarayı doldur · Sanatı keşfet',
-    btn_play:              'Yeni Oyun',
+    btn_play:              'Oyna',
     btn_continue:          'Devam Et',
     btn_leaderboard:       '🏆 Liderlik Tablosu',
     btn_settings:          '⚙ Ayarlar',
@@ -137,6 +139,7 @@ const STRINGS = {
     screen_about_title:    'Hakkında',
     setting_sound:         'Müzik',
     setting_sfx:           'Ses Efektleri',
+    setting_volume:        'Ses Seviyesi',
     setting_particles:     'Parçacık Efektleri',
     setting_language:      'Dil',
     setting_reset:         'İlerlemeyi Sıfırla',

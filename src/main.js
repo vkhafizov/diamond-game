@@ -26,13 +26,14 @@ import {
   initYandex, loadData, saveData,
   submitScore, showLeaderboard,
   showInterstitial, showRewardedAd,
-  getLang,
+  getLang, gameplayStart, gameplayStop,
 } from './yandex.js';
 import { initAurora, pauseAurora, resumeAurora } from './aurora.js';
 import {
   startAmbientDrone, stopAmbientDrone,
   playLevelComplete,
   setMusicEnabled, setSfxEnabled,
+  setMusicVolume, setSfxVolume,
 } from './audio.js';
 import {
   LANGUAGES, setLanguage, getLanguage, detectLanguage, t,
@@ -49,9 +50,11 @@ let appState = {
 
 // Settings state (persisted to localStorage separately)
 let settings = {
-  music:     true,
-  sfx:       true,
-  particles: true,
+  music:       true,
+  sfx:         true,
+  particles:   true,
+  musicVolume: 0.5,
+  sfxVolume:   0.7,
 };
 
 let currentGame     = null;
@@ -201,6 +204,8 @@ function syncSettingsUI() {
   document.getElementById('toggle-music').checked     = settings.music;
   document.getElementById('toggle-sfx').checked       = settings.sfx;
   document.getElementById('toggle-particles').checked = settings.particles;
+  document.getElementById('slider-music').value = Math.round(settings.musicVolume * 100);
+  document.getElementById('slider-sfx').value   = Math.round(settings.sfxVolume   * 100);
 }
 
 // ─── Category / Level select helpers ─────────────────────────────────────────
@@ -213,16 +218,22 @@ function openCategory(cat) {
     const tKey = 'cat_' + cat.toLowerCase();
     titleEl.textContent = t(tKey) !== tKey ? t(tKey) : cat;
   }
-  buildLevelGrid(levelGrid, appState, cat, (id) => {
-    showInterstitial().then(() => startLevel(id));
+  buildLevelGrid(levelGrid, appState, cat, async (id) => {
+    stopAmbientDrone();
+    gameplayStop();
+    await showInterstitial();
+    startLevel(id);
   });
   showScreen('select');
 }
 
 function rebuildCurrentLevelGrid() {
   if (currentCategory) {
-    buildLevelGrid(levelGrid, appState, currentCategory, (id) => {
-      showInterstitial().then(() => startLevel(id));
+    buildLevelGrid(levelGrid, appState, currentCategory, async (id) => {
+      stopAmbientDrone();
+      gameplayStop();
+      await showInterstitial();
+      startLevel(id);
     });
   }
 }
@@ -283,6 +294,7 @@ function startLevel(levelId) {
       if (titleEl) titleEl.textContent = t('complete_title');
 
       showCompleteScreen(level, score, stars, t('score_label'));
+      gameplayStop();
       showScreen('complete');
 
       // Find next level in the same category
@@ -312,12 +324,14 @@ function startLevel(levelId) {
   }, 30_000);
 
   showScreen('game');
+  gameplayStart();
   // Re-center art once the game screen is fully laid out
   requestAnimationFrame(() => { if (currentGame) currentGame.resetView(); });
 }
 
 function stopCurrentGame() {
   clearInterval(autoSaveTimer);
+  gameplayStop();
   if (currentGame) {
     if (currentLevelId !== null) {
       appState.progress[currentLevelId] = currentGame.getProgress();
@@ -358,9 +372,14 @@ window.addEventListener('resize', resizeCanvas);
 // ─── Button wiring ────────────────────────────────────────────────────────────
 
 // — Start screen —
-document.getElementById('btn-continue').addEventListener('click', () => {
+document.getElementById('btn-continue').addEventListener('click', async () => {
   const id = appState.lastLevelId;
-  if (id !== null) showInterstitial().then(() => startLevel(id));
+  if (id !== null) {
+    stopAmbientDrone();
+    gameplayStop();
+    await showInterstitial();
+    startLevel(id);
+  }
 });
 
 document.getElementById('btn-play').addEventListener('click', () => {
@@ -409,15 +428,22 @@ document.getElementById('btn-back-game').addEventListener('click', () => {
 
 document.getElementById('btn-hint').addEventListener('click', async () => {
   if (!currentGame) return;
+  stopAmbientDrone();
   const rewarded = await showRewardedAd();
+  if (settings.music) startAmbientDrone();
   if (rewarded) currentGame.bucketFill();
 });
 
 // — Complete screen —
-document.getElementById('btn-next-level').addEventListener('click', () => {
+document.getElementById('btn-next-level').addEventListener('click', async () => {
   const btnNext = document.getElementById('btn-next-level');
   const nextId = parseInt(btnNext.dataset.nextId, 10);
-  if (nextId) showInterstitial().then(() => startLevel(nextId));
+  if (nextId) {
+    stopAmbientDrone();
+    gameplayStop();
+    await showInterstitial();
+    startLevel(nextId);
+  }
 });
 
 document.getElementById('btn-back-select2').addEventListener('click', () => {
@@ -446,6 +472,18 @@ document.getElementById('toggle-particles').addEventListener('change', e => {
   if (currentGame?.setParticlesEnabled) {
     currentGame.setParticlesEnabled(settings.particles);
   }
+  saveSettings();
+});
+
+document.getElementById('slider-music').addEventListener('input', e => {
+  settings.musicVolume = e.target.value / 100;
+  setMusicVolume(settings.musicVolume);
+  saveSettings();
+});
+
+document.getElementById('slider-sfx').addEventListener('input', e => {
+  settings.sfxVolume = e.target.value / 100;
+  setSfxVolume(settings.sfxVolume);
   saveSettings();
 });
 
@@ -530,15 +568,22 @@ async function init() {
   // Boot audio state
   setMusicEnabled(settings.music);
   setSfxEnabled(settings.sfx);
+  setMusicVolume(settings.musicVolume);
+  setSfxVolume(settings.sfxVolume);
 
   // Boot visual layer
   initAurora(document.getElementById('aurora-bg'));
 
   // Init Yandex SDK
-  await initYandex();
+  const yandexAvailable = await initYandex();
 
-  // Detect & apply language (Yandex hint first)
-  detectLanguage(getLang());
+  // Language: Yandex SDK language takes priority when running inside Yandex Games
+  // (required by Yandex moderation). Fall back to localStorage/navigator otherwise.
+  if (yandexAvailable) {
+    setLanguage(getLang());
+  } else {
+    detectLanguage(getLang());
+  }
   applyTranslations();
 
   // Load game progress
