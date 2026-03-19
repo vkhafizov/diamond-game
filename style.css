@@ -1055,6 +1055,60 @@ body.screen-start .btn-burger { opacity: 0; pointer-events: none; }
   background: #fff;
 }
 
+/* Volume Slider */
+.setting-row--slider {
+  padding: 6px 18px 12px;
+  gap: 14px;
+}
+
+.setting-label--dim {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-md);
+  outline: none;
+  cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6d28d9, #06b6d4);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.volume-slider::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #6d28d9, #06b6d4);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  cursor: pointer;
+}
+
 /* Language Grid */
 .language-grid {
   display: grid;
